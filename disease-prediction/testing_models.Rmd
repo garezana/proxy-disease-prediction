@@ -6,4 +6,22 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+#Libraries
+library(dplyr)
+library(stringr)
+#Data
+dengue_PR_2010_data = read.csv("data/2010_dengue_PR.csv")
+municipality_PR_2010_data= read.csv("data/municipality_population.csv")
+```
+
+```{r}
+#Merging data by comon substring
+combine_dataframes = function(D1, D2, patterns, fulltext){
+D2 = D2 %>% mutate(MUNICIPIO = str_extract(D2[[fulltext]], regex(paste(D1[[patterns]], collapse = "|")))) %>% left_join(D1, by ="MUNICIPIO")
+  return(D2)
+  
+}
+D4 = combine_dataframes( municipality_PR_2010_data, dengue_PR_2010_data, "MUNICIPIO", "FullGeoName")
+str(D4)
+
 ```
