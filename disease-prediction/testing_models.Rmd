@@ -11,15 +11,33 @@ library(dplyr)
 library(stringr)
 #Data
 dengue_PR_2010_data = read.csv("data/2010_dengue_PR.csv")
-municipality_PR_2010_data= read.csv("data/municipality_population.csv")
+population_PR_2010_data = read.csv("data/municipality_population.csv")
+municipality_coords_PR_data = read.csv("data/MunicipiosCentroides_sincayos_.csv")
 ```
 
 ```{r}
 #Merging data by comon substring
-combine_dataframes = function(DF1, DF2, patterns, fulltext){
+combine_dataframes_by_substring = function(DF1, DF2, patterns, fulltext){
 DF2 = DF2 %>% mutate({{patterns}} := str_extract(DF2[[fulltext]], regex(paste(DF1[[patterns]], collapse = "|")))) %>% left_join(DF1, by = patterns)
   return(DF2)
   
 }
-municipality_dengue_PR_2020_data = combine_dataframes( municipality_PR_2010_data, dengue_PR_2010_data, "MUNICIPIO", "FullGeoName")
+population_dengue_PR_2020_data = combine_dataframes_by_substring( population_PR_2010_data, dengue_PR_2010_data, "MUNICIPIO", "FullGeoName")
+
+#Merging population and dengue data with coordinates
+population_dengue_PR_2020_data$MUNICIPIO = toupper(population_dengue_PR_2020_data$MUNICIPIO)
+model_data = municipality_coords_PR_data %>% select(MUNICIPIO,X,Y) %>%  left_join(population_dengue_PR_2020_data, join_by(MUNICIPIO))
+
+#Selecting wanted data
+selecting_features = function(data, ...){
+  selected_features = c(...)
+  selected_data <- data[, selected_features, drop = FALSE]
+  return(selected_data)
+}
+```
+
+
+```{r}
+
+
 ```
