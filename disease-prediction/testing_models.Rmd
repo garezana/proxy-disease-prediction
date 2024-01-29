@@ -7,37 +7,165 @@ output: html_document
 
 ```{r setup, include=FALSE}
 #Libraries
-library(dplyr)
-library(stringr)
+source("libraries.txt")
 #Data
 dengue_PR_2010_data = read.csv("data/2010_dengue_PR.csv")
 population_PR_2010_data = read.csv("data/municipality_population.csv")
 municipality_coords_PR_data = read.csv("data/MunicipiosCentroides_sincayos_.csv")
 ```
 
-```{r}
+
+
+```{r functions}
+#FUNCTIONS
+#Selecting wanted data
+selecting_features = function(data, ...) {
+  selected_features = c(...)
+  data = data[complete.cases(data), ]
+  selected_data = data[, selected_features, drop = FALSE]
+  
+  if ("X" %in% selected_features) {
+    selected_data$X = selected_data$X / 1000
+  }
+  
+  if ("Y" %in% selected_features) {
+    selected_data$Y =selected_data$Y / 1000
+  }
+  
+  selected_data = selected_data[complete.cases(selected_data), ]
+  return(selected_data)
+}
+
+estim_df = function(fit){
+estim1 = tidy(fit, conf.int = TRUE)#confidence intervals on the fixed
+estim2 = tidy(fit, effects = "ran_pars", conf.int = TRUE) #random effect and variance parameters:
+estim_df = rbind(estim1, estim2)
+return(estim_df)
+}
+
 #Merging data by comon substring
 combine_dataframes_by_substring = function(DF1, DF2, patterns, fulltext){
 DF2 = DF2 %>% mutate({{patterns}} := str_extract(DF2[[fulltext]], regex(paste(DF1[[patterns]], collapse = "|")))) %>% left_join(DF1, by = patterns)
   return(DF2)
   
 }
-population_dengue_PR_2020_data = combine_dataframes_by_substring( population_PR_2010_data, dengue_PR_2010_data, "MUNICIPIO", "FullGeoName")
+```
 
-#Merging population and dengue data with coordinates
+```{r dataframe}
+#Joining dataframes
+population_dengue_PR_2020_data = combine_dataframes_by_substring(population_PR_2010_data, dengue_PR_2010_data, "MUNICIPIO", "FullGeoName")
+
+#Joining population and dengue data with coordinates
 population_dengue_PR_2020_data$MUNICIPIO = toupper(population_dengue_PR_2020_data$MUNICIPIO)
-model_data = municipality_coords_PR_data %>% select(MUNICIPIO,X,Y) %>%  left_join(population_dengue_PR_2020_data, join_by(MUNICIPIO))
+model_data = municipality_coords_PR_data %>% select(MUNICIPIO,X,Y,AREA) %>%  left_join(population_dengue_PR_2020_data, join_by(MUNICIPIO))
 
-#Selecting wanted data
-selecting_features = function(data, ...){
-  selected_features = c(...)
-  selected_data <- data[, selected_features, drop = FALSE]
-  return(selected_data)
-}
 ```
 
 
+```{r basic-model}
+#Basic model
+# Make mesh
+model_dat1 = selecting_features (model_data, "MUNICIPIO", "X", "Y")
+prxy = data.frame(X = (model_dat1$X), Y = (model_dat1$Y))
+
+#Visualizing grid
+ggplot(prxy) +
+   geom_tile(aes(x = X, y = Y),
+             fill = "steelblue", 
+             width = 10, height = 10) +
+   coord_equal() +
+   labs(x = "UTM X-coordinate",
+        y = "UTM Y-coordinate")
+mesh = make_mesh(prxy, xy_cols = c("X", "Y"), cutoff = 0.05)
+
+#Simulating data
+sim_dat <- sdmTMB_simulate(
+  formula = ~ 1,
+  data = prxy,
+  mesh = mesh,
+  family = poisson(link = "log"),
+  range = 15,
+  sigma_O = 0.4,
+  seed = 1,
+  B = 1 # B0 = intercept
+)
+#Visualizing
+ggplot(sim_dat, aes(X, Y)) +
+  geom_tile(aes(fill = exp(eta)), width = 10, height = 10) +
+  coord_equal() +
+  labs(x = "UTM X-coordinate", y = "UTM Y-coordinate")+
+  geom_point(aes(size = observed), data = sim_dat, pch = 21) +
+  scale_fill_viridis_c() +
+  scale_size_area() 
+#Retrieving parameters
+mesh <- make_mesh(sim_dat, xy_cols = c("X", "Y"), cutoff = 0.5)
+fit <- sdmTMB(
+  observed ~ 1,
+  data = sim_dat,
+  mesh = mesh,
+  family = poisson(),
+)
+
+estim_df(fit)
+
+```
+
 ```{r}
+#Model with population density by km^2
+#Selecting data
+model_dat1 = selecting_features (model_data, "X", "Y", "Population", "area_square_miles")
+model_dat2 = model_dat1 %>% mutate( area_square_km =  model_dat1$area_square_miles * 2.59, population_by_square_km = Population/area_square_km ) %>% select(X,Y,population_by_square_km)
 
+#Scaling ppopulation density data
+model_dat2$population_by_square_km = scale(model_dat2$population_by_square_km)
 
+#Makign mesh
+mesh = make_mesh(model_dat2, xy_cols = c("X", "Y"), cutoff = 0.05)
+#Simulating data
+sim_dat1 <- sdmTMB_simulate(
+  formula = ~ 1 + population_by_square_km,
+  data = model_dat2,
+  mesh = mesh,
+  family = poisson(link = "log"),
+  range = 15,
+  sigma_O = .4,
+  seed = 1,
+  B = c(1,0) # B0 = intercept
+)
+head(sim_dat1)
+
+#Retrieving parameters
+mesh_mode1 <- make_mesh(sim_dat1, xy_cols = c("X", "Y"), cutoff = 0.05)
+fit_model1 <- sdmTMB(
+  observed ~ 1 + population_by_square_km ,
+  data = sim_dat1,
+  mesh = mesh,
+  family = poisson(),
+  spatial = "on"
+)
+summary(fit)
+estim_df(fit)
+sanity(fit)
+```
+
+```{r}
+#Dengue as a response variable model
+#Selectinf data
+model_dat3 = selecting_features (model_data, "X", "Y", "Population", "area_square_miles", "Count")
+model_dat3 = model_dat3 %>% mutate( area_square_km =  model_dat1$area_square_miles * 2.59, population_by_square_km = Population/area_square_km ) %>% select(Count,X,Y,population_by_square_km)
+model_dat3$population_by_square_km = scale(model_dat2$population_by_square_km)
+
+#Making mesh
+mesh_dengue_resp = make_mesh(model_dat3, xy_cols = c("X", "Y"), cutoff = .5)
+
+#Fitting model
+fit_model3 <- sdmTMB(
+  Count ~ 1 + population_by_square_km,
+  data = model_dat3,
+  mesh = mesh_dengue_resp,
+  family = poisson(),
+  spatial = "on"
+)
+summary(fit_model3)
+estim_df(fit_model3)
 ```
