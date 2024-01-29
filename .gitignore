@@ -47,3 +47,13 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+#personal scratch files
+disease-prediction/scratch-paper.R
+
+#others
+.DS_Store
+*.html
+disease-prediction/git_setup.R
+disease-prediction/data/tl_2020_72_all/
+disease-prediction/data/wc2.1_cruts4.06_2.5m_prec_2010-2019.zip
