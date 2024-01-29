@@ -1,77 +1,77 @@
-﻿MUNICIPIO,Population
-Adjuntas,19483
-Aguada,41959
-Aguadilla,60949
-Aguas Buenas,28659
-Aibonito,25900
-Anasco,29261
-Arecibo,96440
-Arroyo,19575
-Barceloneta,24816
-Barranquitas,30318
-Bayamon,208116
-Cabo Rojo,50917
-Caguas,142893
-Camuy,35159
-Canovanas,47648
-Carolina,176762
-Catano,28140
-Cayey,48119
-Ceiba,13631
-Ciales,18782
-Cidra,43480
-Coamo,40512
-Comerio,20778
-Corozal,37142
-Dorado,38165
-Fajardo,36993
-Florida,12680
-Guanica,19427
-Guayama,45362
-Guayanilla,21581
-Guaynabo,97924
-Gurabo,45369
-Hatillo,41953
-Hormigueros,17250
-Humacao,58466
-Isabela,45631
-Jayuya,16642
-Juana Diaz,50747
-Juncos,40290
-Lajas,25753
-Lares,30753
-Las Marias,9881
-Las Piedras,38675
-Loiza,30060
-Luquillo,20068
-Manati,44113
-Maricao,6276
-Maunabo,12225
-Mayaguez,89080
-Moca,40109
-Morovis,32610
-Naguabo,26720
-Naranjito,30402
-Orocovis,23423
-Patillas,19277
-Penuelas,24282
-Ponce,166327
-Quebradillas,25919
-Rincon,15200
-Rio Grande,54304
-Sabana Grande,25265
-Salinas,31078
-San German,35527
-San Juan,395326
-San Lorenzo,41058
-San Sebastian,42430
-Santa Isabel,23274
-Toa Alta,74066
-Toa Baja,89609
-Trujillo Alto,74842
-Utuado,33149
-Vega Alta,39951
-Vega Baja,59662
-Villalba,26073
-Yabucoa,37941
-Yauco,42043
+﻿MUNICIPIO,Population,area_square_miles
+Adjuntas,19483,66.69
+Aguada,41959,30.85
+Aguadilla,60949,36.53
+Aguas Buenas,28659,30.08
+Aibonito,25900,31.31
+Anasco,29261,39.29
+Arecibo,96440,125.9
+Arroyo,19575,15.01
+Barceloneta,24816,18.69
+Barranquitas,30318,34.25
+Bayamon,208116,44.32
+Cabo Rojo,50917,70.37
+Caguas,142893,58.6
+Camuy,35159,46.35
+Canovanas,47648,32.87
+Carolina,176762,45.32
+Catano,28140,4.84
+Cayey,48119,51.93
+Ceiba,13631,29.04
+Ciales,18782,66.53
+Cidra,43480,36.02
+Coamo,40512,78.1
+Comerio,20778,28.4
+Corozal,37142,42.57
+Dorado,38165,23.09
+Fajardo,36993,29.86
+Florida,12680,15.21
+Guanica,19427,37.05
+Guayama,45362,64.99
+Guayanilla,21581,42.27
+Guaynabo,97924,27.58
+Gurabo,45369,27.89
+Hatillo,41953,41.78
+Hormigueros,17250,11.34
+Humacao,58466,44.75
+Isabela,45631,55.3
+Jayuya,16642,44.53
+Juana Diaz,50747,60.28
+Juncos,40290,26.49
+Lajas,25753,59.95
+Lares,30753,61.45
+Las Marias,9881,46.36
+Las Piedras,38675,33.88
+Loiza,30060,19.37
+Luquillo,20068,25.81
+Manati,44113,46.13
+Maricao,6276,36.62
+Maunabo,12225,21.07
+Mayaguez,89080,77.65
+Moca,40109,50.34
+Morovis,32610,38.87
+Naguabo,26720,51.66
+Naranjito,30402,27.4
+Orocovis,23423,63.62
+Patillas,19277,46.7
+Penuelas,24282,44.62
+Ponce,166327,114.7
+Quebradillas,25919,22.68
+Rincon,15200,14.29
+Rio Grande,54304,60.62
+Sabana Grande,25265,35.83
+Salinas,31078,69.37
+San German,35527,54.5
+San Juan,395326,47.85
+San Lorenzo,41058,53.11
+San Sebastian,42430,70.42
+Santa Isabel,23274,34.02
+Toa Alta,74066,27.02
+Toa Baja,89609,23.24
+Trujillo Alto,74842,20.76
+Utuado,33149,113.5
+Vega Alta,39951,27.73
+Vega Baja,59662,45.86
+Villalba,26073,35.64
+Yabucoa,37941,55.21
+Yauco,42043,68.19

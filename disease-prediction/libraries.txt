@@ -1,0 +1,4 @@
+library(sdmTMB)
+library(ggplot2)
+library(knitr)
+library(dplyr)library(stringr)
