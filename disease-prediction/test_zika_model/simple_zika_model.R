@@ -3,16 +3,17 @@
 library(ggplot2)
 library(gridExtra)
 library(sdmTMB)
+library(dplyr)
 
 #Data
 dengue.2010.training.dat = read.csv("data/PR_2010_dengue_training.csv")
 zika.2016.pred.dat = read.csv("data/PR_2016_3weekdata.csv")
-zika.2016.tested.dat = read.csv("data/tested_static_zika_counts_allweeks.csv")
+zika.2016.tested.dat = read.csv("test_zika_model/data/tested_static_zika_counts_allweeks.csv")
 
 #Functions
 density_plot = function(df_vector, feature_name){
-  mean = mean(test_early_data[[feature_name]])
-  sd = sd(test_early_data[[feature_name]])
+  mean = mean(df_vector[[feature_name]])
+  sd = sd(df_vector[[feature_name]])
   ggplot(df_vector) + 
     geom_density(aes(x = .data[[feature_name]])) +
     geom_vline(aes(xintercept= mean ),
@@ -49,9 +50,15 @@ density_plot = function(df_vector, feature_name){
 #Training Zika models
   #Filtering for early
   test_early_data = zika.2016.pred.dat %>% filter(week == 26) %>% dplyr::select(-c(week,data_week_class, MUNICIPIO))
+  test_early_repor_data = zika.2016.tested.dat %>% filter(week == 5) %>% dplyr::select(-c(week, MUNICIPIO, count_type, year)) %>% rename(zika_count_2016 = count)
   
+  
+  #Saling data
+  test_early_data  <- transform(test_early_data,population_by_square_km_2016_s=scale(population_by_square_km_2016,center=FALSE),tmean_2016_s=scale(tmean_2016,center=FALSE))
   #Visualizing data
   density_plot(test_early_data, "zika_count_2016")
+  density_plot(reported_early_data, "zika_count_2016")
+  
   
   # Making Zika mesh
   test_early_mesh = make_mesh(test_early_data, xy_cols = c("X", "Y"), cutoff = 0.05)
@@ -71,10 +78,10 @@ density_plot = function(df_vector, feature_name){
   
     #Dengue priors
     test_early_dengue_priors = sdmTMB(
-      zika_count_2016 ~ 1 + scale(population_by_square_km_2016) + scale(tmean_2016),
+      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
       data = test_early_data,
       mesh = test_early_mesh,
-      family = lognormal(link = "log"),
+      family = nbinom2(link = "log"),
       spatial = "on",
       priors = sdmTMBpriors(
         b = normal(c(b_0, b_1, b_2), c(s_0, s_1, s_2)),
@@ -84,21 +91,18 @@ density_plot = function(df_vector, feature_name){
     
     #Vague priors
     test_early_vague_priors = sdmTMB(
-      zika_count_2016 ~ 1 + scale(population_by_square_km_2016) + scale(tmean_2016),
+      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
       data = test_early_data,
       mesh = test_early_mesh,
-      family = lognormal(link = "log"),
-      spatial = "on",
-      priors = sdmTMBpriors(
-        b = normal(c(NA, NA,NA), c(NA, NA, NA)),
-        matern_s = pc_matern(range_gt = NA, sigma_lt = NA)),
+      family = nbinom2(link = "log"),
+      spatial = "on"
     )
     #Intercept only
     test_early_intercept = sdmTMB(
       zika_count_2016 ~ 1 ,
       data = test_early_data,
       mesh = test_early_mesh,
-      family = lognormal(link = "log"),
+      family = nbinom2(link = "log"),
       spatial = "on"
     )
     
@@ -110,8 +114,8 @@ density_plot = function(df_vector, feature_name){
     
   #New dataframe to predict
     new_df_predictions = new_data = data.frame(
-      population_by_square_km_2016 = test_early_data$population_by_square_km_2016,
-      tmean_2016 = test_early_data$tmean_2016,
+      population_by_square_km_2016_s = test_early_data$population_by_square_km_2016_s,
+      tmean_2016_s = test_early_data$tmean_2016_s,
       X = test_early_data$X,
       Y = test_early_data$Y
     )
@@ -129,12 +133,12 @@ density_plot = function(df_vector, feature_name){
     #Dengue priors
     ggplot() +
       geom_point(data = predicted_dengue , aes(x = est, y = as.numeric(zika_count_2016)))+ labs(y = "Reported Cases", x = "Predicted number of cases") +
-      ggtitle("Dengue") +
+      ggtitle("Dengue Priors") +
       theme_bw() + geom_abline(intercept = 0, slope = 1)
     #Vague priors
     ggplot() +
       geom_point(data = predicted_vague, aes(x = est , y = as.numeric(zika_count_2016)))+ labs(y = "Reported Cases", x = "Predicted number of cases") +
-      ggtitle("Vague") +
+      ggtitle("Vague Priors") +
       theme_bw() + geom_abline(intercept = 0, slope = 1)
     #Intercept
     ggplot() +
@@ -146,10 +150,10 @@ density_plot = function(df_vector, feature_name){
     
     #CV Priors dengue
     cv_early_dengue_priors = sdmTMB_cv(
-      zika_count_2016 ~ 1 + scale(population_by_square_km_2016) + scale(tmean_2016),
+      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
       data = test_early_data,
       mesh = test_early_mesh,
-      family = lognormal(link = "log"),
+      family = nbinom2(link = "log"),
       spatial = "on",
       priors = sdmTMBpriors(
         b = normal(c(b_0, b_1, b_2), c(s_0, s_1, s_2)),
@@ -159,13 +163,10 @@ density_plot = function(df_vector, feature_name){
 
     #CV vague priors
     cv_early_dengue_vague = sdmTMB_cv(
-      zika_count_2016 ~ 1 + scale(population_by_square_km_2016),
+      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
       data = test_early_data,
       mesh = test_early_mesh,
-      family = lognormal(link = "log"),
-      priors = sdmTMBpriors(
-        b = normal(c(NA, NA,NA), c(NA, NA, NA)),
-        matern_s = pc_matern(range_gt = NA, sigma_lt = NA)),
+      family = nbinom2(link = "log"),
       spatial = "on",
       k_folds = 4
     )
@@ -174,7 +175,7 @@ density_plot = function(df_vector, feature_name){
       zika_count_2016 ~ 1,
       data = test_early_data,
       mesh = test_early_mesh,
-      family = lognormal(link = "log"),
+      family = nbinom2(link = "log"),
       spatial = "on",
       k_folds = 4
     )
@@ -189,5 +190,4 @@ density_plot = function(df_vector, feature_name){
     cv_early_dengue_vague$sum_loglik 
     cv_early_dengue_intercept$sum_loglik 
 
-    log_likelihood_cross_mid_vague = cross_mid_vague$sum_loglik
     
