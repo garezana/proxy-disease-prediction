@@ -7,6 +7,7 @@ library(sdmTMB)
 #Data
 dengue.2010.training.dat = read.csv("data/PR_2010_dengue_training.csv")
 zika.2016.pred.dat = read.csv("data/PR_2016_3weekdata.csv")
+zika.2016.tested.dat = read.csv("data/tested_static_zika_counts_allweeks.csv")
 
 #Functions
 density_plot = function(df_vector, feature_name){
