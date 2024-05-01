@@ -54,10 +54,12 @@ population_km2 = c(112.79643, 525.13407, 644.19470, 367.86074, 319.38678, 287.54
 
 df = data.frame(count = count, X = X, Y = Y, tmean = tmean, population_km2 = population_km2)
 
+#Mesh
 mesh_dengue_resp = make_mesh(df, xy_cols = c("X", "Y"), cutoff = 0.05)
 
+#Models
 model1 = sdmTMB(
-  count ~ 1 + scale(population_km2,center = FALSE) + scale(tmean,center = FALSE),
+  count ~ 1 + scale(population_km2) + scale(tmean),
   data = df,
   mesh = mesh_dengue_resp,
   family = poisson(link = "log"),
@@ -71,7 +73,7 @@ sanity(model1)
 head(model1$tmb_data$X_ij[[1]])
 
 model2 = sdmTMB(
-  count ~ 1 + scale(population_km2, center = FALSE) + scale(tmean,center = FALSE),
+  count ~ 1 + scale(population_km2) + scale(tmean),
   data = df,
   mesh = mesh_dengue_resp,
   family = nbinom1(link = "log"),
