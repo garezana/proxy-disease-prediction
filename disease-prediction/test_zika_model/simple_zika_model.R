@@ -7,8 +7,8 @@ library(dplyr)
 
 #Data
 dengue.2010.training.dat = read.csv("data/PR_2010_dengue_training.csv")
-zika.2016.pred.dat = read.csv("data/PR_2016_3weekdata.csv")
-zika.2016.tested.dat = read.csv("test_zika_model/data/tested_static_zika_counts_allweeks.csv")
+zika.2016.pred.dat = read.csv("data/PR_2016_3weekdata.csv") #Suspected cases
+zika.2016.tested.dat = read.csv("data/tested_static_zika_counts_allweeks.csv") #Reported cases
 
 #Functions
 density_plot = function(df_vector, feature_name){
@@ -27,44 +27,65 @@ density_plot = function(df_vector, feature_name){
 }
 
 #Train Dengue model 
-  
   #Making mesh
   mesh_dengue_resp = make_mesh(dengue.2010.training.dat, xy_cols = c("X", "Y"), cutoff = 0.05)
+  
   #Fitting model
   dengue_2010_model = sdmTMB(
     dengue_count_2010 ~ 1 + scale(population_by_square_km_2010) + scale(tmean_2010),
     data = dengue.2010.training.dat,
     mesh = mesh_dengue_resp,
-    family = poisson(),
+    family = nbinom2(link = "log"),
     spatial = "on"
   )
   
   #Checking model params
   summary(dengue_2010_model)
-  estim1 = tidy(dengue_2010_model, conf.int = TRUE)#confidence intervals on the fixed
+  estim1 = tidy(dengue_2010_model, conf.int = TRUE) #confidence intervals on the fixed
   estim2 = tidy(dengue_2010_model, effects = "ran_pars", conf.int = TRUE) #random effect and variance parameters:
   rbind(estim1, estim2)
   sanity(dengue_2010_model)
   head(dengue_2010_model$tmb_data$X_ij[[1]])
+  
+  #New dataframe to predict dengue
+  new_df_dengue = new_data = data.frame(
+    population_by_square_km_2010 = dengue.2010.training.dat$population_by_square_km_2010,
+    tmean_2010 = dengue.2010.training.dat$tmean_2010,
+    X = dengue.2010.training.dat$X,
+    Y = dengue.2010.training.dat$Y
+  )
+  
+  #Predicting
+  predicted_dengue = predict(dengue_2010_model, newdata = new_df_dengue, type = "response")
+  predicted_dengue["dengue_count_2010"] = dengue.2010.training.dat$dengue_count_2010
+  
+  #Plotting
+  ggplot() +
+    geom_point(data = predicted_dengue , aes(x = est, y = as.numeric(dengue_count_2010)))+ labs(y = "Reported Cases", x = "Predicted number of cases") +
+    ggtitle("Dengue Priors") +
+    theme_bw() + geom_abline(intercept = 0, slope = 1)
 
 #Training Zika models
-  #Filtering for early
-  test_early_data = zika.2016.pred.dat %>% filter(week == 26) %>% dplyr::select(-c(week,data_week_class, MUNICIPIO))
-  test_early_repor_data = zika.2016.tested.dat %>% filter(week == 5) %>% dplyr::select(-c(week, MUNICIPIO, count_type, year)) %>% rename(zika_count_2016 = count)
-  
-  
-  #Saling data
-  test_early_data  <- transform(test_early_data,population_by_square_km_2016_s=scale(population_by_square_km_2016,center=FALSE),tmean_2016_s=scale(tmean_2016,center=FALSE))
-  #Visualizing data
+  #Filtering wanted data week. 
+    #Run this if you want suspected number of cases
+        #Early (2016): week == 26
+        #Mid (2016): week == 39
+        #Late (2017): week == 1
+        test_early_data = zika.2016.pred.dat %>% filter(week == 1) %>% dplyr::select(-c(week,data_week_class, MUNICIPIO))
+    #Run this if you want estimated number of cases
+        #Very early (2016): week ==5
+        #Early (2016): week == 26
+        #Mid (2016): week == 39
+        #Late (2017): week == 1
+        test_early_data = zika.2016.tested.dat %>% filter(week == 5) %>% dplyr::select(-c(week, MUNICIPIO, count_type, year)) %>% rename(zika_count_2016 = count)
+
+ #Visualizing data
   density_plot(test_early_data, "zika_count_2016")
-  density_plot(reported_early_data, "zika_count_2016")
-  
   
   # Making Zika mesh
   test_early_mesh = make_mesh(test_early_data, xy_cols = c("X", "Y"), cutoff = 0.05)
   
   #Training models
-  
   #Parameters
   b_0 = estim1$estimate[1]
   b_1 = estim1$estimate[2]
@@ -77,8 +98,8 @@ density_plot = function(df_vector, feature_name){
   sigma_0 = estim2$estimate[2]
   
     #Dengue priors
-    test_early_dengue_priors = sdmTMB(
-      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
+    test_dengue_priors = sdmTMB(
+      zika_count_2016 ~ 1 + scale(population_by_square_km_2016) + scale(tmean_2016),
       data = test_early_data,
       mesh = test_early_mesh,
       family = nbinom2(link = "log"),
@@ -90,15 +111,15 @@ density_plot = function(df_vector, feature_name){
     
     
     #Vague priors
-    test_early_vague_priors = sdmTMB(
-      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
+    test_vague_priors = sdmTMB(
+      zika_count_2016 ~ 1 + scale(population_by_square_km_2016) + scale(tmean_2016),
       data = test_early_data,
       mesh = test_early_mesh,
       family = nbinom2(link = "log"),
       spatial = "on"
     )
     #Intercept only
-    test_early_intercept = sdmTMB(
+    test_intercept = sdmTMB(
       zika_count_2016 ~ 1 ,
       data = test_early_data,
       mesh = test_early_mesh,
@@ -106,38 +127,38 @@ density_plot = function(df_vector, feature_name){
       spatial = "on"
     )
     
-    summary(test_early_dengue_priors)
-    summary(test_early_vague_priors)
-    summary(test_early_intercept)
+    summary(test_dengue_priors)
+    summary(test_vague_priors)
+    summary(test_intercept)
     
 
     
   #New dataframe to predict
     new_df_predictions = new_data = data.frame(
-      population_by_square_km_2016_s = test_early_data$population_by_square_km_2016_s,
-      tmean_2016_s = test_early_data$tmean_2016_s,
+      population_by_square_km_2016 = test_early_data$population_by_square_km_2016,
+      tmean_2016 = test_early_data$tmean_2016,
       X = test_early_data$X,
       Y = test_early_data$Y
     )
     
   #Predicting
-  predicted_dengue = predict(test_early_dengue_priors, newdata = new_df_predictions, type = "response")
-  predicted_dengue["zika_count_2016"] = test_early_data$zika_count_2016
-  predicted_vague = predict(test_early_vague_priors, newdata = new_df_predictions, type = "response")
-  predicted_vague["zika_count_2016"] = test_early_data$zika_count_2016
-  predicted_intercept = predict(test_early_intercept, newdata = new_df_predictions, type = "response")
+  predicted_dengue_priors = predict(test_dengue_priors, newdata = new_df_predictions, type = "response")
+  predicted_dengue_priors["zika_count_2016"] = test_early_data$zika_count_2016
+  predicted_vague_priors = predict(test_vague_priors, newdata = new_df_predictions, type = "response")
+  predicted_vague_priors["zika_count_2016"] = test_early_data$zika_count_2016
+  predicted_intercept = predict(test_intercept, newdata = new_df_predictions, type = "response")
   predicted_intercept["zika_count_2016"] = test_early_data$zika_count_2016
  
   
   #Plotting
     #Dengue priors
     ggplot() +
-      geom_point(data = predicted_dengue , aes(x = est, y = as.numeric(zika_count_2016)))+ labs(y = "Reported Cases", x = "Predicted number of cases") +
+      geom_point(data = predicted_dengue_priors , aes(x = est, y = as.numeric(zika_count_2016)))+ labs(y = "Reported Cases", x = "Predicted number of cases") +
       ggtitle("Dengue Priors") +
       theme_bw() + geom_abline(intercept = 0, slope = 1)
     #Vague priors
     ggplot() +
-      geom_point(data = predicted_vague, aes(x = est , y = as.numeric(zika_count_2016)))+ labs(y = "Reported Cases", x = "Predicted number of cases") +
+      geom_point(data = predicted_vague_priors, aes(x = est , y = as.numeric(zika_count_2016)))+ labs(y = "Reported Cases", x = "Predicted number of cases") +
       ggtitle("Vague Priors") +
       theme_bw() + geom_abline(intercept = 0, slope = 1)
     #Intercept
@@ -150,7 +171,7 @@ density_plot = function(df_vector, feature_name){
     
     #CV Priors dengue
     cv_early_dengue_priors = sdmTMB_cv(
-      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
+      zika_count_2016 ~ 1 + scale(population_by_square_km_2016) + scale(tmean_2016),
       data = test_early_data,
       mesh = test_early_mesh,
       family = nbinom2(link = "log"),
@@ -158,17 +179,17 @@ density_plot = function(df_vector, feature_name){
       priors = sdmTMBpriors(
         b = normal(c(b_0, b_1, b_2), c(s_0, s_1, s_2)),
         matern_s = pc_matern(range_gt = range_0, sigma_lt = sigma_0)),
-      k_folds = 4
+      k_folds = 2
     )
 
     #CV vague priors
     cv_early_dengue_vague = sdmTMB_cv(
-      zika_count_2016 ~ 1 + population_by_square_km_2016_s + tmean_2016_s,
+      zika_count_2016 ~ 1 + scale(population_by_square_km_2016) + scale(tmean_2016),
       data = test_early_data,
       mesh = test_early_mesh,
       family = nbinom2(link = "log"),
       spatial = "on",
-      k_folds = 4
+      k_folds = 2
     )
     #CV intercept
     cv_early_dengue_intercept = sdmTMB_cv(
@@ -177,7 +198,7 @@ density_plot = function(df_vector, feature_name){
       mesh = test_early_mesh,
       family = nbinom2(link = "log"),
       spatial = "on",
-      k_folds = 4
+      k_folds = 2
     )
     
     #fold log-likelihood
