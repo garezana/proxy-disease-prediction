@@ -71,7 +71,7 @@ return(estim_df)
           #Model Priors
     priors <- sdmTMBpriors(
         b = normal(c(4.59, 0.438, 0.104), c(0.174, 0.147, 0.131)),
-        matern_s = pc_matern(range_gt = 162.65, sigma_lt = 0.907)
+        #matern_s = pc_matern(range_gt = 162.65, sigma_lt = 0.907)
   )
     model <- sdmTMB(
           formula,
