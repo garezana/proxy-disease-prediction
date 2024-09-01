@@ -7,14 +7,29 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+getwd()
+
+library_file <- "libraries.txt"
+
+load_or_install <- function(package) {
+  if (!require(package, character.only = TRUE)) {
+    install.packages(package, dependencies = TRUE)
+    library(package, character.only = TRUE)
+  }
+  }
+
+if (file.exists(library_file)) {
+  libraries <- readLines(library_file)
+  
+  lapply(libraries, load_or_install)
+} else {
+  stop("libraries.txt does not exist in cwd")
+}
+
 ```
 
 ```{r}
-library(sdmTMB)
-library(dplyr)
-library(ggplot2)
-library(Metrics)
-library(rsq)
 
 #Data
   #Dengue
@@ -177,10 +192,15 @@ for (i in seq_along(datasets)) {
   }
 }
 
-# Plot all results
-for (plot_name in names(plot_list)) {
-  print(plot_list[[plot_name]])
+# Plot all results in pairs 
+for (i in seq(1, length(plot_list), by = 2)) {
+  if (i < length(plot_list)) {
+    grid.arrange(plot_list[[i]], plot_list[[i + 1]], ncol = 2)
+  } else {
+    grid.arrange(plot_list[[i]], ncol = 1)
+  }
 }
+
 ```
 
 ```{r}
