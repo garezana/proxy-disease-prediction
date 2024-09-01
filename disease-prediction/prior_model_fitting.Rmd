@@ -105,7 +105,7 @@ return(estim_df)
           family = family,
           spatial = spatial,
         )
-    prior_status_name <- "_np"
+    prior_status_name <- "_no_priors"
         
       }
         return(list(model = model, prior_status_name =  prior_status_name))
@@ -171,7 +171,7 @@ for (i in seq_along(datasets)) {
         p <- ggplot() +
           geom_point(data = predicted, aes(x = est, y = count)) +
           labs(y = "Reported Cases", x = "Predicted number of cases") +
-          ggtitle(paste("Prediction Plot for Model", model_name)) +
+          ggtitle(paste(model_name)) +
           theme_bw() +
           geom_abline(intercept = 0, slope = 1)
         
