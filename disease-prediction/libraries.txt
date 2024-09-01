@@ -1,4 +1,5 @@
-library(sdmTMB)
-library(ggplot2)
-library(knitr)
-library(dplyr)library(stringr)
+sdmTMB
+ggplot2
+knitr
+dplyrstringrMetricsrsq
+gridExtra
