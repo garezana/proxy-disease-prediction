@@ -167,13 +167,22 @@ for (i in seq_along(datasets)) {
         predicted$est <- exp(predicted$est)
         predicted$count <- data$count
         
+        x_breaks_interval <- if (max(predicted$est) < 500) {
+          10
+        } else if (max(predicted$est) < 2500) {
+          100
+        } else {
+          1000
+        }
         # Plot results
         p <- ggplot() +
           geom_point(data = predicted, aes(x = est, y = count)) +
           labs(y = "Reported Cases", x = "Predicted number of cases") +
           ggtitle(paste(model_name)) +
           theme_bw() +
-          geom_abline(intercept = 0, slope = 1)
+          geom_abline(intercept = 0, slope = 1) +
+          scale_y_continuous(limits = c(0, 8000), breaks = seq(0, 8000, by = 1000)) +
+          scale_x_continuous(breaks = seq(0, max(predicted$est), by = x_breaks_interval))
         
         plot_list[[model_name]] <- p
         
@@ -195,9 +204,9 @@ for (i in seq_along(datasets)) {
 # Plot all results in pairs 
 for (i in seq(1, length(plot_list), by = 2)) {
   if (i < length(plot_list)) {
-    grid.arrange(plot_list[[i]], plot_list[[i + 1]], ncol = 2)
+    grid.arrange(plot_list[[i]], plot_list[[i + 1]], nrow = 2)
   } else {
-    grid.arrange(plot_list[[i]], ncol = 1)
+    grid.arrange(plot_list[[i]], nrow = 1)
   }
 }
 
